@@ -10,60 +10,101 @@ function ask (questionText) {
   })
 }
 
-//-------------initialize global variables here-----------//
-
-let inventoryPlayer = [] //need this  to hold items so player can check if there is an item in their inventory
-
-//GLOBAL ROOM LOCATION
-let currentRoom = `porch`
+//------------Player object--------------//
+//This player object contains the player's inventory and starts them off on the porch.
+let player = {
+  inventoryPlayer: [],
+  currentRoom: `porch`
+}
 
 //-----------------Rooms class----------------//
-//here we will define the class for the rooms in the game
+//Here we will define the class for the rooms in the game. I create a this for name, description and locked.
 
 class Room {
-  constructor (name, description, locked) {
+  constructor (name, description, locked, item, connections) {
     this.name = name
     this.description = description
     this.locked = locked
+    this.item = item
+    this.connections = connections
   }
 
+  //move function of Room class that takes player from current room to new room they enter and gives the description of the new room
   move () {
-    console.log(`OK, you have moved from ${currentRoom} to ${this.room} and `)
+    console.log(this.connections)
+
+    if (this.connections.includes(player.currentRoom)) {
+      console.log('succesS')
+    }
   }
 }
 
 //----------------make Rooms from the class ---------------//
-//these constructors pass in all item properties from class to the child item--name, description, action into each item variable
+//These constructors pass in all item properties from class (name, description, locked, item, connections) to the child item to create a new room!
 
-let foyer = new Room(
-  'foyer',
-  'a foyer you step into as soon as you open the front door of the Witch House.',
-  true
+let porch = new Room(
+  'a dirty and scary porch welcomes you to the Witch House', //name of room
+  'Once on this porch you read a chilling message!', //description of room
+  false, //is it locked true or false
+  'doormat', //item found in the room
+  'foyer' //connecting rooms, the 0 index in the array is the previous room, the 1 index of array is room it connects to
 )
 
-let kitchen = new Room('kitchen', 'you see a pie...', false)
-
-let den = new Room('den', 'a cozy den', false)
-
-let bedroom = new Room('bedroom', 'a comfy bedroom', false)
-
+let foyer = new Room(
+  'dark and menacing foyer you step into as soon as you open the front door of the Witch House',
+  'Once in this haunting and dingy foyer, /n you notice a gallon of water on the floor in a dark corner. /nYou can examine, use, or take the water!',
+  true,
+  'water',
+  ['porch', 'kitchen']
+)
 let bathroom = new Room('bathroom', 'a bathroom', false)
 
-let witchroom = new Room('witchroom', `the evil witch's filthy lair`, true)
+let kitchen = new Room(
+  'you have entered a creepy cobwebby kitchen with a ghostly figure watching you from the window. The most delicious-smelling freshly baked blueberry pie you have ever imagined is on the kitchen table.',
+  'You can examine, use, or take the delicious pie!',
+  false,
+  'blueberry pie',
+  ['foyer', 'den']
+)
 
-//-----------------create lookup table for game rooms-----------//
+let den = new Room(
+  'den',
+  'a cozy denYou are now in a cozy den with a crackling fire in the fireplace. There is a table and on it is a book with a well-worn cover. Someone has drawn a skull and crossbones on it--so incredibly scary! You can try to examine, use, or take the book!',
+  false,
+  'book',
+  ['kitchen', 'bedroom']
+)
 
+let bedroom = new Room(
+  'bedroom',
+  'You are in a surprisingly clean and cozy bedroom with a comfortable bed in it. There are soft pillows and warm blankets. You can try to examine, use, or take the book!',
+  false,
+  'bed',
+  ['den', 'lair']
+)
+
+let lair = new Room(
+  'lair',
+  `the evil witch's filthy lair`,
+  false,
+  'witch',
+  'bedroom'
+) //here there is no room after the lair so I just listed the previous room
+
+//-----------------Lookup table for Rooms-----------//
+//This lookup table is for the rooms, it looks up string and spits out variable version
 let lookupRoomTable = {
+  porch: porch,
   foyer: foyer,
   kitchen: kitchen,
   den: den,
   bedroom: bedroom,
   bathroom: bathroom,
-  witchroom: witchroom
+  lair: lair
 }
 
 //-----------------Items class----------------//
-//here we will define the class for items player can take or use
+//here we will define the class for items player can take, drop, or use
 
 class Item {
   constructor (name, description, action, takeable) {
@@ -89,6 +130,16 @@ class Item {
     }
   }
 
+  drop () {
+    //'drop' method of 'Item' class. If item is in player's inventory and this method is called it pops the item off the array inventory
+
+    if (this.takeable) {
+      inventoryPlayer.pop(this.name)
+      return `you dropped ${this.name}`
+    } else {
+      return `hey, you can't drop that!`
+    }
+  }
   //'use' method of the 'Item' class. If the item is named in the if statement, the method returns a message otherwise it will return the action
   use () {
     if (this.name === 'key' && inventoryPlayer.includes('key')) {
@@ -98,62 +149,62 @@ class Item {
     }
   }
 }
-//----------------make game items from the class ---------------//
-//these constructors pass in all item properties from class to the child item--name, description, action into each item variable
+//----------------Make game items from the class ---------------//
+//These constructors pass in all item properties from class Item to the child item (name, description, action, takeable) and creates an item as specified.
 
 let doormat = new Item(
-  'doormat',
-  'a doormat',
-  'you lift up the doormat and see a key. .',
-  undefined //not takeable so it will come back as undefined
+  'doormat', //name
+  'a doormat', //description
+  'you lift up the doormat and see a key. Do you want to use it or take it?', //action
+  false //not takeable so it will come back as undefined
 )
 let door = new Item(
   'door',
-  'a door, lol. How about that! Type use or take plus door for more action.',
-  'The dirty old door with a rusty lock is locked.',
-  undefined //not takeable so it will come back as undefined
+  'This is a dirty old door with a rusty lock and it is locked.',
+  'The door opens and you see a foyer! Type move foyer if you want to go in.',
+  false
 )
 
 let key = new Item(
   'key',
-  'a key',
-  'a rusty old key with a skull on it looks like it fits the lock on the door. You can try to use or take the key.',
-  true
+  'a rusty old key with a skull on it looks like it fits the lock on the door. You can try to use or take the key',
+  'The key goes into the lock on the door and you turn it. Type use, take, or examine door for more action!',
+  true //this one is takeable so it's true
 )
 
 let water = new Item(
   'water',
-  'a gallon container of cool, clear, fresh water. Type use or take for more action!',
-  'A gallon container of water is in the corner of the foyer. You may have a sip, but you may want to take the water with you, it  may come in handy! You can try to use or take the water.',
+  'A gallon container of water is in the corner of the foyer. You may have a sip, but you may want to take the water with you, it  may come in handy! Type use water or take water for more action!',
+  'The water tastes delicious! Type take to take the rest, use to drink more, or r for list of other rooms!',
   true
 )
 
 let pie = new Item(
   'pie',
   'a homemade blueberry pie! how delightful! Type use or take to interact further with this superb treat.',
-  'You spot a delicious fresh-baked blueberry pie that just came out of the oven. The pie smells yummy! Have a slice if you are hungry. You can take it with you by typing take at the prompt.',
+  'The pie is sweet and fruity, like nothing from this world! It is so delicious, but if you like you can take the rest with you by typing take at the prompt or you can move on to another room (type r for list of rooms).',
   true
 )
 
 let book = new Item(
   'book',
-  'a book called Eloquent Javascript. So far, this is the scariest thing in the whole house. But you can type use or take if you have the guts!',
-  'There is a book on the living room table. It is a dog-eared copy of Eloquent Javascript. It looks pretty complicated, but you never know when you might need to learn some coding skills. You can take it if you like, just type take at the prompt.',
+  'There is a book on the living room table. It is a dog-eared copy of Eloquent Javascript. So far, this is the scariest thing in the whole house.',
+  `This book looks pretty complicated, but you never know when you might need to learn some coding skills or just blow someone's mind with it. You can type use or take... if you have the guts! Otherwise, move on to another room (type r for list of rooms).`,
   true
 )
 
 let sink = new Item(
   'sink',
-  'a sink that looks nice and clean. You can type use or take to see what happens next!',
-  'The sink has hot and cold water and a fresh bar of soap. It would be a great place to wash up in case you picked up some nasty witch germs opening the front door! Type use to use it!',
-  undefined //not takeable so it will come back as undefined
+  `The bathroom has a gruesome bathtub filled with bones and hair, but there is a sink that looks nice and clean. It even has hot and cold water, a fresh bar of soap, and a fresh, folded towel. ',
+  'This sink would be a great place to wash up in case you picked up some nasty witch germs opening the front door! Type use to use it! Try not to think about what's in that bathtub...`,
+  false
 )
 
 let bed = new Item(
   'bed',
   'a bed with pillows and a nice, warm blankie. If you type use or take you can find out what is next!',
   'the bed looks so inviting, maybe take a nap? Take care though, the witch is pretty hungry and can smell you in the house! Type use to use the bed for your rest.',
-  undefined //not takeable so it will come back as undefined
+  false
 )
 
 let witch = new Item(
@@ -163,8 +214,8 @@ let witch = new Item(
   true
 )
 
-//-----------------create lookup table for game items-----------//
-
+//-----------------Lookup table for game items-----------//
+//still not sure what lookup table does--research and explain it//This lookup table is for the rooms, it looks up string and spits out variable version
 let lookupItemTable = {
   doormat: doormat,
   key: key,
@@ -177,11 +228,21 @@ let lookupItemTable = {
   witch: witch
 }
 
-//-----------------Start Game Code----------------//
+//----State Machine for Room transitions----------//
+/*I started building a state machine here by creating the lookup for room transitions. This shows the allowable transitions I would have. However, I decided to instead approach the transitions as "connections" within each individual room. I'm leaving this here, commented out, if I want to come back and change the code to use a state machine instead!
+let roomState = {
+  porch: ['foyer'],
+  foyer: ['bathroom'],
+  kitchen: ['den'],
+  den: ['bedroom'],
+  bedroom: ['witchRoom']
+}*/
 
+//-----------------Start Game Code----------------//
+//This welcome message uses async await to ask a user if they want to check out the Hungry Witch House. If they say yes, they receive a message welcoming to the challenge and giving some instructions. Otherwise they are taunted until they decide to play.
 async function welcome () {
   let welcomeMessage = await ask(
-    "Welcome to the Crazy Old Witch House. It's a spooky looking house with a rickety old door and cobwebs on the windows. This house is filled with evil and dread, but do not let that deter you! There is a tasty treat inside, a place to rest and clean up, and some interesting reading material. It will be worth it, I promise! Want to check it out?"
+    "Welcome to the Hungry Witch House. It's a spooky looking house with a rickety old door and cobwebs on the windows. This house is filled with evil and dread, but do not let that deter you! There is a tasty treat inside, a place to rest and clean up, and some interesting reading material. It will be worth it, I promise! Want to check it out?"
   )
 
   //this while loop welcomes user to the game if they answer yes to the above console.log message. If they type no it scolds them.
@@ -191,44 +252,48 @@ async function welcome () {
     )
   }
   console.log(
-    'Okay, glad you are taking the challenge! You are a crazy, but brave soul to enter this wicked place. The witch thinks that sounds delicious--er, I mean admirable! As you can see, the front door is old and cracked and there is a dusty, worn out doormat at your feet. You can try to examine, take, or use plus the name of the item you see in this game that you want to interact with!'
+    'Okay, glad you are taking the challenge! You are a crazy, but brave soul to enter this wicked place. The witch thinks that sounds delicious--er, I mean admirable! As you can see, the front door is old and cracked and there is a dusty, worn out doormat at your feet. You can type examine, take, or use plus the name of the item you see to interact with the item. You can type move to change rooms!'
   )
   await start()
 }
 welcome()
 
 async function start () {
-  //declare variable for user action that takes in user input to define the action
-
+  //declare variable for user action that takes in user input via async await to define the action
   let userAction = await ask('what would you like to do?')
 
   //SANITIZATION OF INPUT: takes user action input, lower cases it, and splits it on any spaces
   let inputArray = userAction.toLowerCase().split(' ')
 
-  //this code defines a variable action. It takes input array @ index zero to give you the action user specified (ie - "use")
+  //this code defines a variable action. It takes input array @ index zero to give you only the action user specified (ie - "use").
   let action = inputArray[0]
 
   let targetTable = inputArray.slice(1).join(' ')
-  //targetTable is the target we are going look up in the lookup table. This code slices input array and joins together in case 2 word input---this may be redundant
+  //targetTable is the target we are going look up in the lookup table. It would be the second word the user enters, so it would look up an item or a room in their respective lookup tables. This code slices input array and joins together at space in case you have 2 word input---like bath room. I don't have two word items in my items list, but this is code sanitization
 
   if (action === 'move') {
-    //this conditional goes to the lookupItemTable's use() method and whatever is the target of the lookup table and run the use method on it and console.logs it.
-    console.log(lookupRoomTable[targetTable].move())
-    await start()
+    //if the action is 'move' it goes to room's move() method and whatever is the target of the lookup table it runs the move()method on it
+    lookupRoomTable[targetTable].move()
+    await start() //this takes user back to the userAction so they can enter more input
   }
   if (action === 'use') {
-    //this conditional goes to the lookupItemTable's use() method and whatever is the target of the lookup table and run the use method on it and console.logs it.
+    //if the action is 'use' it goes to room's move() method and whatever is the target of the lookup table it runs the move()method on it
     console.log(lookupItemTable[targetTable].use())
     await start()
-  } else if (action === 'take') {
-    //instanceof is for if item exists--looks at boolean of takeable item
-    if (lookupItemTable[targetItemTable] instanceof Item) {
-      //if takeable it will return the take property.Otherwise, see else statement below...
-      console.log(lookupItemTable[targetTable].take())
+    //
+  } else {
+    console.log("You can't use that, try again!")
+    await start()
+  }
+  if (action === 'take') {
+    //if the action is take, lookUpItemTable references targetTable and checks if it is in the Item class -- a boolean so it will result in true or false. "instanceof" checks if item exists--looks at boolean of takeable item.
+    if (lookupItemTable[targetTable] instanceof Item) {
+      //if takeable it will run the take method on it. Otherwise, it will lot "you can't take that!"
+      await start()
     } else {
       console.log(lookupItemTable[targetTable] instanceof Item)
       //It's not an item, can't take it message
-      console.log("That's not an item, so you can't take it!")
+      console.log("You can't take that, try again!") //for some reason, when I type take and the item's ame it console.lots the use message above.
       await start()
     }
   }
@@ -244,26 +309,15 @@ async function start () {
   } else {
     //catch all for every other action player tries to do!
     console.log("I can't do that...invalid input, please try again!")
+    await start()
   }
 }
 
 start()
 //this is what makes it go back to the top of the async function so it can start getting the user input again since this input wasn't right
 
-/*let enterCode = await ask(
-    `Don't forget to enter code  so the door will open. It's a word representing a favorite witch holiday. Type it in now!`
-  )/
-
-  //process.exit()
-}
-
-//-------------User Inputs/Action-------------//
-
-
 //-------player----------//
 //create a player variable. what is in player's inventory. player should be able to see this by typing "see inventory"
-
-
 
 //--------------State Machine------------//
 //here we will have a state machine to control movement between rooms that is and is not allowed//
